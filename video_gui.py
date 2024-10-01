@@ -6,7 +6,7 @@ class VideoCompressorGUI:
     def __init__(self, root, handle_compression, handle_audio_conversion):
         self.root = root
         self.root.title("Video Utility Tool")
-        self.root.geometry("500x450")
+        self.root.geometry("500x500")
         
         self.file_path = None
 
@@ -29,34 +29,50 @@ class VideoCompressorGUI:
         self.audio_settings_label = tk.Label(root, text="Audio Extraction Settings:", font=("Arial", 12))
         self.audio_settings_label.pack(pady=10)
 
-        self.bitrate_label = tk.Label(root, text="Bitrate (kbps):")
+        # Bitrate Selection
+        self.bitrate_label = tk.Label(root, text="Bitrate (Quality):")
         self.bitrate_label.pack()
-        self.bitrate_entry = tk.Entry(root)
-        self.bitrate_entry.insert(0, "128")  # Default bitrate value
-        self.bitrate_entry.pack()
+        self.bitrate_options = ["Best (320 kbps)", "Normal (128 kbps)", "Lowest (64 kbps)"]
+        self.bitrate_var = tk.StringVar(root)
+        self.bitrate_var.set(self.bitrate_options[1])  # Default to "Normal"
+        self.bitrate_menu = tk.OptionMenu(root, self.bitrate_var, *self.bitrate_options)
+        self.bitrate_menu.pack()
 
-        self.channels_label = tk.Label(root, text="Channels (1 for Mono, 2 for Stereo):")
+        # Channels Selection
+        self.channels_label = tk.Label(root, text="Channels:")
         self.channels_label.pack()
-        self.channels_entry = tk.Entry(root)
-        self.channels_entry.insert(0, "2")  # Default channels value (Stereo)
-        self.channels_entry.pack()
+        self.channels_options = ["Stereo (2 channels)", "Mono (1 channel)"]
+        self.channels_var = tk.StringVar(root)
+        self.channels_var.set(self.channels_options[0])  # Default to "Stereo"
+        self.channels_menu = tk.OptionMenu(root, self.channels_var, *self.channels_options)
+        self.channels_menu.pack()
 
-        self.sample_rate_label = tk.Label(root, text="Sample Rate (Hz):")
+        # Sample Rate Selection
+        self.sample_rate_label = tk.Label(root, text="Sample Rate:")
         self.sample_rate_label.pack()
-        self.sample_rate_entry = tk.Entry(root)
-        self.sample_rate_entry.insert(0, "44100")  # Default sample rate value
-        self.sample_rate_entry.pack()
+        self.sample_rate_options = ["Best (44100 Hz)", "Normal (22050 Hz)", "Lowest (11025 Hz)"]
+        self.sample_rate_var = tk.StringVar(root)
+        self.sample_rate_var.set(self.sample_rate_options[0])  # Default to "Best"
+        self.sample_rate_menu = tk.OptionMenu(root, self.sample_rate_var, *self.sample_rate_options)
+        self.sample_rate_menu.pack()
 
         # Convert to Audio Button
         self.convert_button = tk.Button(root, text="Convert to Audio", 
                                         command=lambda: handle_audio_conversion(
                                             self.file_path,
-                                            self.bitrate_entry.get(),
-                                            self.channels_entry.get(),
-                                            self.sample_rate_entry.get()
+                                            self.bitrate_var.get(),
+                                            self.channels_var.get(),
+                                            self.sample_rate_var.get()
                                         ),
                                         state=tk.DISABLED)
         self.convert_button.pack(pady=20)
+
+        # Explanation for Settings
+        self.explanation_label = tk.Label(root, text="Settings Guide:\n- Bitrate: Higher bitrate = Better quality but larger file size.\n"
+                                                     "- Channels: Stereo has better spatial audio quality; Mono is smaller.\n"
+                                                     "- Sample Rate: Higher rate = Better quality but larger file size.", 
+                                          font=("Arial", 10), justify=tk.LEFT)
+        self.explanation_label.pack(pady=10)
 
     def select_file(self):
         self.file_path = filedialog.askopenfilename(filetypes=[("Video files", "*.mp4 *.mkv *.avi *.mov")])

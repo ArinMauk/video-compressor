@@ -43,10 +43,25 @@ def handle_audio_conversion(file_path, bitrate, channels, sample_rate):
         return
 
     try:
-        # Convert input values to appropriate types
-        bitrate_str = f"{bitrate}k"  # Bitrate in kbps
-        channels_int = int(channels)
-        sample_rate_int = int(sample_rate)
+        # Map bitrate, channels, and sample rate from dropdown values
+        bitrate_map = {
+            "Best (320 kbps)": "320k",
+            "Normal (128 kbps)": "128k",
+            "Lowest (64 kbps)": "64k"
+        }
+        channels_map = {
+            "Stereo (2 channels)": 2,
+            "Mono (1 channel)": 1
+        }
+        sample_rate_map = {
+            "Best (44100 Hz)": 44100,
+            "Normal (22050 Hz)": 22050,
+            "Lowest (11025 Hz)": 11025
+        }
+
+        bitrate_str = bitrate_map[bitrate]
+        channels_int = channels_map[channels]
+        sample_rate_int = sample_rate_map[sample_rate]
 
         # Extract and compress audio using FFmpeg
         (
@@ -56,8 +71,6 @@ def handle_audio_conversion(file_path, bitrate, channels, sample_rate):
             .run()
         )
         messagebox.showinfo("Success", f"Audio extracted and compressed successfully!\nSaved as: {output_path}")
-    except ValueError as ve:
-        messagebox.showerror("Input Error", f"Please provide valid numeric values for bitrate, channels, and sample rate. Error: {str(ve)}")
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
