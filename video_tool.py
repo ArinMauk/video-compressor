@@ -1,11 +1,11 @@
 import os
+import wave
+import vosk
 import ffmpeg
+import json
 from tkinter import messagebox, filedialog
 import tkinter as tk
 from video_gui import VideoUtilityApp
-import speech_recognition as sr
-import tempfile
-
 
 def handle_compression(file_path):
     if not file_path:
@@ -82,58 +82,70 @@ def handle_audio_to_text(file_path):
         messagebox.showerror("Error", "No file selected!")
         return
 
+    # Convert audio to WAV if needed
+    wav_output_path = file_path.rsplit(".", 1)[0] + ".wav"
     try:
-        recognizer = sr.Recognizer()
-        temp_dir = tempfile.mkdtemp()  # Create a temporary directory to store audio chunks
-        base_filename = os.path.splitext(os.path.basename(file_path))[0]
-        
-        # Split audio into 1-minute segments using FFmpeg
-        chunk_output_pattern = os.path.join(temp_dir, f"{base_filename}_%03d.wav")
+        # Convert MP3 to WAV using FFmpeg
         (
             ffmpeg
             .input(file_path)
-            .output(chunk_output_pattern, f='segment', segment_time='60', c='pcm_s16le')
+            .output(wav_output_path, format='wav')
             .run()
         )
+    except Exception as e:
+        messagebox.showerror("Error", f"An error occurred during file conversion: {str(e)}")
+        return
 
-        # List all audio chunks generated
-        audio_chunks = [os.path.join(temp_dir, f) for f in os.listdir(temp_dir) if f.endswith('.wav')]
-        audio_chunks.sort()  # Sort to ensure sequential processing
-
-        # Transcribe each chunk
-        full_transcription = ""
-        for chunk_file in audio_chunks:
-            with sr.AudioFile(chunk_file) as source:
-                audio_data = recognizer.record(source)
-                try:
-                    transcription = recognizer.recognize_google(audio_data)
-                    full_transcription += transcription + "\n"
-                except sr.UnknownValueError:
-                    full_transcription += "[Unintelligible Audio]\n"
-                except sr.RequestError:
-                    messagebox.showerror("Error", "Could not request results from the speech recognition service.")
-                    return
-
-        # Save full transcription to file
-        output_path = filedialog.asksaveasfilename(defaultextension=".txt",
-                                                   filetypes=[("Text files", "*.txt")],
-                                                   initialfile="transcription.txt")
-        if not output_path:
+    try:
+        # Load Vosk model (change the path to where you unzipped your Vosk model)
+        model_path = r"C:\Users\arinm\OneDrive\Desktop\Software Development\Models\vosk-model-en-us-0.22\vosk-model-en-us-0.22"
+        if not os.path.exists(model_path):
+            messagebox.showerror("Error", "Vosk model not found. Please provide the correct model path.")
             return
 
-        with open(output_path, "w") as file:
-            file.write(full_transcription)
+        model = vosk.Model(model_path)
 
-        messagebox.showinfo("Success", f"Transcription saved successfully!\nSaved as: {output_path}")
+        # Open the WAV file
+        with wave.open(wav_output_path, "rb") as wf:
+            if wf.getnchannels() != 1 or wf.getsampwidth() != 2 or wf.getframerate() not in [8000, 16000, 22050, 44100]:
+                messagebox.showerror("Error", "Audio file must be WAV format with a supported sample rate (8k, 16k, 22.05k, 44.1k Hz) and 16-bit.")
+                return
+
+            # Create a Vosk recognizer
+            recognizer = vosk.KaldiRecognizer(model, wf.getframerate())
+
+            # Transcribe the audio file
+            full_transcription = ""
+            while True:
+                data = wf.readframes(4000)
+                if len(data) == 0:
+                    break
+                if recognizer.AcceptWaveform(data):
+                    result = json.loads(recognizer.Result())
+                    full_transcription += result.get("text", "") + "\n"
+            # Process any remaining partial results
+            result = json.loads(recognizer.FinalResult())
+            full_transcription += result.get("text", "") + "\n"
+
+            # Save full transcription to file
+            output_path = filedialog.asksaveasfilename(defaultextension=".txt",
+                                                       filetypes=[("Text files", "*.txt")],
+                                                       initialfile="transcription.txt")
+            if not output_path:
+                return
+
+            with open(output_path, "w") as file:
+                file.write(full_transcription)
+
+            messagebox.showinfo("Success", f"Transcription saved successfully!\nSaved as: {output_path}")
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {str(e)}")
 
     finally:
-        # Clean up temporary files
-        for f in os.listdir(temp_dir):
-            os.remove(os.path.join(temp_dir, f))
-        os.rmdir(temp_dir)
+        # Clean up WAV file after use if it was successfully created
+        if os.path.exists(wav_output_path):
+            os.remove(wav_output_path)
 
 if __name__ == "__main__":
     root = tk.Tk()
