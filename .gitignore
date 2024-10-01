@@ -1,0 +1,12 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+
+# Specific .pyc file for VideoCompressorGUI
+__pycache__/VideoCompressorGUI.cpython-312.pyc
+
+# Cache files
+*.cache
